@@ -1,0 +1,33 @@
+GENESIS 0.11.0 — Desktop Release
+
+Extract the entire ZIP to a folder you can read, then double-click GENESIS.exe.
+Keep GENESIS.exe beside its _internal folder. Python is not required to launch.
+This is a folder-based Windows x64 application, not an installer.
+
+Space: pause/play. 1, 2, 4: simulation speed. Mouse wheel: zoom.
+Right or middle drag: pan. Click an organism: inspect. F: follow. Home: fit.
+O: Settings. I: hide/restore UI. F11: fullscreen. E: effects. H: habitats.
+Escape closes/cancels panels or restores the UI. Settings > Appearance
+contains the controls reference and a button to reopen the quick guide.
+
+Settings > Experiment: presets and configuration. Changes apply only when
+starting a new experiment. Restart/load/start ask before replacing the world.
+Settings > Worlds: save, load, statistics CSV, lineage CSV, diagnostics CSV.
+File dialogs accept typed absolute paths. CSV exports require new filenames.
+World saves can replace an existing file after confirmation. Loads open paused.
+
+Preferences and rotating logs: %LOCALAPPDATA%\GENESIS
+Default world and export folders: Worlds and Exports beneath that directory.
+You can choose other writable folders. The application folder is protected
+from user-data writes. The last successful destinations are remembered.
+Appearance, panel geometry/tab and window settings are saved on normal exit.
+Worlds are saved ONLY when you choose Save World: preferences do not save life.
+
+If startup fails, check genesis.log in the user directory. Moving or deleting
+preferences.json restores presentation defaults on the next launch.
+Extract a fresh copy if _internal is missing or damaged.
+
+Unsigned local build: this release is not code-signed or an installer.
+Validated on the development machine; not certified across Windows hardware.
+No automatic updates, network service, telemetry, or uploading is included.
+See THIRD_PARTY.txt and licenses for runtime dependency notices.
