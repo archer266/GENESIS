@@ -1,0 +1,16 @@
+﻿{
+    "version":  "0.13.0",
+    "passed":  true,
+    "source_files_verified":  105,
+    "installed_path":  "C:\\Users\\Admin\\Desktop\\Coding Projects\\Genesis\\artifacts\\installer check e7b67602\\Installed GENESIS Ω",
+    "per_user_registration":  true,
+    "shortcuts_verified":  true,
+    "launch_without_python_search_path":  true,
+    "same_version_upgrade_preserved_data":  true,
+    "uninstall_preserved_data":  true,
+    "user_data_files":  5,
+    "user_data_evidence":  "C:\\Users\\Admin\\AppData\\Local\\GENESIS\\InstallerCheck-e7b67602",
+    "isolated_machine":  false,
+    "interactive_wizard_checked":  false,
+    "standard_user_account_checked":  false
+}

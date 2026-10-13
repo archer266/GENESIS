@@ -8,6 +8,21 @@ population cycles or hidden difficulty adjustments.
 
 ## Launch the Windows application
 
+**Installer:** double-click
+`release\installer\GENESIS-0.13.0-windows-x64-setup.exe`, follow the wizard,
+and optionally select a desktop shortcut. Leave **Launch GENESIS** selected to
+open it immediately, or use **Start > GENESIS** afterward. Installation is
+per-user without administrator privileges, under
+`%LOCALAPPDATA%\Programs\GENESIS`. Python is not required. Windows 10/11 x64 is
+the installer target; this local build is unsigned.
+
+Run a newer installer to update the same application, preferably after closing
+GENESIS so recovery finishes. Windows **Settings > Apps > Installed apps >
+GENESIS > Uninstall** removes the program and shortcuts, but preserves preferences,
+worlds, exports, and recovery in `%LOCALAPPDATA%\GENESIS` and chosen user folders.
+Reinstalling can reuse those files. The installer does not migrate or delete them.
+
+**Portable alternative:**
 Double-click `release\dist\GENESIS\GENESIS.exe`, or extract
 `release\GENESIS-0.13.0-windows-x64.zip` and double-click the executable inside
 its `GENESIS` folder. Keep `_internal` beside the executable. Python and a
@@ -18,8 +33,28 @@ Set-Location "C:\Users\Admin\Desktop\Coding Projects\Genesis"
 Start-Process -FilePath ".\release\dist\GENESIS\GENESIS.exe"
 ```
 
-This is an unsigned local Windows x64 folder distribution, not an installer.
-It has not been published or uploaded.
+The portable ZIP is unchanged. Portable and installed copies share the same
+default user-data folder; avoid running both against it simultaneously.
+No binary release has been published or uploaded.
+
+### Rebuild the installer
+
+Install [Inno Setup 6.3 or later](https://jrsoftware.org/isinfo.php) (validated
+with 6.7.3), then run from the project directory:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-Installer.ps1
+# If ISCC.exe is not in a standard location:
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-Installer.ps1 -Compiler "C:\Tools\Inno Setup 6\ISCC.exe"
+```
+
+This packages the existing `release\dist\GENESIS` build without rebuilding the
+app or changing its version. It fails clearly if Inno Setup is unavailable.
+`tools\Test-Installer.ps1` performs an isolated install/upgrade/uninstall test;
+it refuses to overwrite an already registered GENESIS installation or shortcuts.
+It leaves preserved test data as evidence. See [installer checks and pending
+validation](reports/installer-013/RESULTS.md). Another Windows computer without
+Python and hands-on wizard/post-install Launch checks remain pending.
 
 ## The corrected ecosystem
 

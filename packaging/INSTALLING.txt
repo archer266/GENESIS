@@ -1,0 +1,23 @@
+GENESIS 0.13.0 - Windows installation
+
+Run GENESIS-0.13.0-windows-x64-setup.exe and follow the installer.
+No administrator privileges or separate Python installation are needed.
+Windows 10/11 x64 is required. This local build is unsigned.
+
+GENESIS installs for the current Windows user in:
+  %LOCALAPPDATA%\Programs\GENESIS
+Launch from Start > GENESIS, the optional desktop shortcut, or the installer's
+Launch GENESIS checkbox. Keep the _internal folder beside GENESIS.exe.
+
+Run a newer GENESIS installer to update the same installation. Close GENESIS
+first so its recovery write can finish. Preferences, saves, exports and recovery
+remain separate in %LOCALAPPDATA%\GENESIS (or your selected locations).
+
+Uninstall through Windows Settings > Apps > Installed apps > GENESIS > Uninstall.
+Uninstall removes the application and shortcuts, but retains user data. Reinstall
+to use retained preferences/recovery. Delete user data separately only if wanted.
+
+The portable ZIP remains an alternative; extract its entire folder to use it.
+Both forms use the same default per-user data folder. Avoid running both at once
+against that folder: concurrent recovery writers across processes are not tested.
+GETTING_STARTED.txt contains the application controls and saving instructions.
