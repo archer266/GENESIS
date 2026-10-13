@@ -215,6 +215,10 @@ No upload, installer, telemetry or automatic update is included.
 
 ## Validation and limitations
 
+The [final 0.13.0 release check and manual checklist](reports/recovery-013/FINAL_CHECK.md)
+found no demonstrated blocker and verified ZIP integrity/completeness. Hands-on
+checklist testing and another Windows computer without Python remain pending.
+
 Phase 11 passed **194 tests** and native scripted packaged checks, including
 cross-process recovery resumed paused, autosave controls, preferences, fullscreen,
 Unicode file operations and exact continuation. At 281 organisms with full
