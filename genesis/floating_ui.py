@@ -6,10 +6,11 @@ from .user_files import writable_destination
 from . import observatory_ui as legacy
 from .observatory_ui import ObservatoryPanel, TEXT, MUTED, ACCENT
 from .observatory import ExperimentSettings, statistics
-from .presets import PRESETS, preset_name
+from .presets import PRESETS, preset_name, display_presets
 from .persistence import load_world, SaveError
 from .glass import button
 from .lineage_ui import LineageView
+from .ecology import recommended_settings
 from .environment import DEFAULTS
 from .environment_ui import draw_environment
 from .diagnostics_ui import draw_diagnostics
@@ -48,7 +49,7 @@ class FloatingPanel(ObservatoryPanel):
         self.event_offset = 0
 
     def visible_fields(self):
-        return [row for row in self.FIELDS
+        return [(row[0], "Mutation strength %", row[2]) if row[0] == "mutation_percent" and self.values["rules_version"] == "2" else row for row in self.FIELDS
                 if not (row[0] == "initial_predators" and self.values["predator_enabled"] == "0")
                 and not (row[0] == "map_seed" and self.values["habitat_enabled"] == "0")
                 and not (row[0] == "season_length" and self.values["seasons_enabled"] == "0")
@@ -57,6 +58,7 @@ class FloatingPanel(ObservatoryPanel):
     def draft_settings(self):
         # Hidden drafts remain intact. Only effective settings enter the model.
         values = dict(self.values)
+        values["rules_version"] = "2"
         if values["predator_enabled"] == "0":
             values["initial_predators"] = "0"
         if values["habitat_enabled"] == "0":
@@ -106,10 +108,10 @@ class FloatingPanel(ObservatoryPanel):
 
     def content_height(self):
         if self.tab == "settings":
-            return self.setup_end + 261 + len(PRESETS)*158 + min(1200, len(self.notice)//40*19)
+            return self.setup_end + 261 + len(display_presets())*158 + min(1200, len(self.notice)//40*19)
         if self.tab == "worlds":
-            return 515 + min(2600, (len(self.world_notice)+len(self.notice))//40*19)
-        return {"history": 700, "evolution": 700, "habitats": 590, "cell": 1540, "appearance": 925, "environment": 950, "diagnostics": 1230}[self.tab]
+            return 640 + min(2600, (len(self.world_notice)+len(self.notice))//40*19)
+        return {"history": 700, "evolution": 700, "habitats": 590, "cell": 1540, "appearance": 1160, "environment": 950, "diagnostics": 1230}[self.tab]
 
     def layout(self, app):
         screen = app.screen.get_rect()
@@ -164,14 +166,16 @@ class FloatingPanel(ObservatoryPanel):
             control("new_seed", "New seed draft", end+25, x=126, width=w-144)
             control("start", "Start new experiment...", end+72)
             control("reset", "Restart same seed...  [R]", end+116)
-            for i, preset in enumerate(PRESETS):
-                control("preset_"+str(i), preset.name, end+202+i*158)
+            for row, (i, preset) in enumerate(display_presets()):
+                title = preset.name
+                control("preset_"+str(i), title, end+202+row*158)
         elif self.tab == "worlds":
             control("save_world", "Save World   [Ctrl+S]", 66)
             control("load_world", "Load World...   [Ctrl+L]", 111)
             control("export", "Export retained history as CSV", 156)
             control("export_lineage", "Export lineage archive as CSV", 201)
             control("export_diagnostics", "Export diagnostics as CSV", 246)
+            control("autosave", "Autosave / "+("On" if app.recovery and app.recovery.enabled else "Off"), 296)
         elif self.tab == "appearance":
             control("guide", "Show quick guide", 805)
             control("environment_chip", "Environment status chip / "+("On" if app.show_environment else "Off"), 755)
@@ -229,7 +233,8 @@ class FloatingPanel(ObservatoryPanel):
         if self.pending:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.pending = None
+                    if not (app.recovery and app.recovery.pending_choice):
+                        self.pending = None
                 elif event.key == pygame.K_TAB:
                     self.keyboard_focus = "confirm" if self.keyboard_focus == "cancel" else "cancel"
                 elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
@@ -344,6 +349,9 @@ class FloatingPanel(ObservatoryPanel):
         if key in self.disabled:
             return
         if key in ("cancel", "confirm"):
+            if app.recovery and app.recovery.pending_choice:
+                app.choose_recovery(key == "confirm")
+                return
             callback = self.pending
             self.pending = None
             self.keyboard_focus = None
@@ -366,13 +374,16 @@ class FloatingPanel(ObservatoryPanel):
             self.values[key] = "0" if self.values[key] == "1" else "1"
             self.focus(None)
         elif key == "defaults":
-            self.values = ExperimentSettings().text_values()
+            self.values = recommended_settings().text_values()
             self.notice, self.notice_error = "Defaults prepared. Start new to apply.", False
         elif key == "new_seed":
             self.values["seed"] = str((app.seed+1+legacy.secrets.randbelow(2**32-1)) % 2**32)
             self.notice, self.notice_error = "New seed prepared. Start new to apply.", False
         elif key.startswith("preset_"):
-            preset = PRESETS[int(key.split("_")[1])]
+            index = int(key.split("_")[1])
+            if index not in dict(display_presets()):
+                return
+            preset = PRESETS[index]
             self.values = preset.settings.text_values()
             self.notice, self.notice_error = preset.name+" prepared. Edit fields, then Start new.", False
             self.scrolls["settings"] = 0
@@ -380,6 +391,10 @@ class FloatingPanel(ObservatoryPanel):
             self.start_experiment(app)
         elif key == "reset":
             self.confirm_restart(app)
+        elif key == "autosave":
+            if app.recovery:
+                app.recovery.set_enabled(not app.recovery.enabled)
+                app.save_preferences()
         elif key in ("save_world", "load_world"):
             self.file_action(app, key == "save_world")
         elif key == "export":
@@ -476,6 +491,8 @@ class FloatingPanel(ObservatoryPanel):
                 app.save_file(path)
             else:
                 candidate = load_world(path)  # Validate before asking to replace anything.
+                if candidate.world.config.rules_version != 2:
+                    raise SaveError("This world uses obsolete simulation rules. Start a new corrected ecosystem instead.")
                 self.confirm(app, f"Load seed {candidate.settings.seed} at {candidate.world.time:.1f}s? Current world and history will be replaced. The loaded world opens paused.", lambda: app.apply_loaded(candidate, path))
         except (SaveError, OSError, ValueError) as error:
             logging.getLogger("genesis").warning("World I/O failed: %s", error)
@@ -525,7 +542,7 @@ class FloatingPanel(ObservatoryPanel):
             elif self.tab == "diagnostics":
                 draw_diagnostics(app, self)
             elif self.tab == "settings":
-                app.label("Experiment", 18, 10, 20)
+                app.label("Experiment / "+"Ecology", 18, 10, 20)
                 self.wrap(app, f"Active: {preset_name(app.settings)} / seed {app.seed}", 18, 40, size[0]-36)
                 for key, title, limits in self.visible_fields():
                     if key not in self.content_inputs:
@@ -545,20 +562,25 @@ class FloatingPanel(ObservatoryPanel):
                 end = self.setup_end
                 app.label("Drafts only. Starting replaces this world.", 18, end, 13, MUTED)
                 app.label("Starting presets", 18, end+171, 17)
-                for i, preset in enumerate(PRESETS):
-                    y = end+242+i*158
+                for row, (i, preset) in enumerate(display_presets()):
+                    y = end+242+row*158
                     s = preset.settings
                     app.label(f"Seed {s.seed} / {s.initial_population} prey / {s.initial_predators} predators", 18, y, 13, MUTED)
-                    app.label(f"Food {s.food_per_second:g}/s / mutation +/-{s.mutation_strength*100:g}%", 18, y+21, 13, MUTED)
+                    app.label(f"Food {s.food_per_second:g}/s / mutation strength {s.mutation_strength*100:g}%", 18, y+21, 13, MUTED)
                     description = (f"Habitats / map seed {s.map_seed}" if s.habitat_enabled else "Uniform habitat")+" / "+preset.description
                     if s.seasons_enabled or s.droughts_enabled:
-                        description = f"Cycle {s.season_length}s; drought {s.drought_duration}s; gaps {s.drought_interval}-{s.drought_interval*2}s. Food pressure; uncertain survival."
+                        rules = "Ecology"
+                        description = f"{rules} rules. Cycle {s.season_length}s; drought {s.drought_duration}s; gaps {s.drought_interval}-{s.drought_interval*2}s. Survival is uncertain."
                     self.wrap(app, description, 18, y+44, size[0]-36)
-                self.wrap(app, self.notice or "Defaults and presets fill drafts only.", 18, end+214+len(PRESETS)*158, size[0]-36, (255, 156, 165) if self.notice_error else MUTED)
+                self.wrap(app, self.notice or "Defaults and presets fill drafts only.", 18, end+214+len(display_presets())*158, size[0]-36, (255, 156, 165) if self.notice_error else MUTED)
             elif self.tab == "worlds":
                 app.label("Worlds & exports", 18, 10, 20)
                 app.label("Checkpoint the ecosystem. Export its retained history.", 18, 40, 13, MUTED)
-                y = self.wrap(app, self.world_notice, 18, 303, size[0]-36, (255, 156, 165) if self.world_notice_error else MUTED)
+                recovery_text = app.recovery.status if app.recovery else "Recovery unavailable in this test session."
+                if app.recovery and not app.recovery.enabled and not app.recovery.error:
+                    recovery_text = "Autosave off. Existing recovery files are retained."
+                self.wrap(app, recovery_text, 18, 344, size[0]-36, (255, 156, 165) if app.recovery and app.recovery.error else MUTED)
+                y = self.wrap(app, self.world_notice, 18, 430, size[0]-36, (255, 156, 165) if self.world_notice_error else MUTED)
                 y = self.wrap(app, self.notice if self.saved_path or self.notice_error else "CSV includes seeds, experiment settings and sampled statistics.", 18, y+25, size[0]-36, (255, 156, 165) if self.notice_error else MUTED)
                 self.wrap(app, "Load validates the file, then asks before replacing this experiment. Save/load picker time is excluded from playback.", 18, y+28, size[0]-36)
             else:
@@ -569,10 +591,12 @@ class FloatingPanel(ObservatoryPanel):
                     color = legacy.HABITAT_COLORS[i]
                     pygame.draw.circle(surface, color, (24+i*120, 626), 4)
                     app.label(title, 36+i*120, 617, 13, color)
-                app.label("CELL COLOR = INHERITED SPEED", 18, 661, 13, MUTED)
+                app.label("CELL COLOR = INHERITED BODY SIZE", 18, 661, 13, MUTED)
                 for i, color in enumerate(legacy.PALETTE):
                     pygame.draw.rect(surface, color, (18+i*66, 693, 58, 4), border_radius=2)
-                app.label("<33       33-39      39-45      45-51      >=51", 18, 706, 13, MUTED)
+                for i, value in enumerate(("3", "4.5", "6", "7.5", "9")):
+                    app.label(value, 18+i*66, 706, 13, MUTED)
+                self.wrap(app, "Color follows inherited body size from 3 to 9 through 33 shades: small cyan/lime cells, medium orange cells, large pink/violet cells. This makes food specialization visible. Speed remains in movement and Details. Predators are angular with a warmer palette. Color is not fitness or adaptation.\n\nEcology food: three golden particle sizes favor different body sizes. Predators digest catches and pay local hunting interference. Mutation strength sets the maximum step to half that fraction of each trait's allowed range.", 18, 864, size[0]-36)
             for key, title in self.titles.items():
                 if self.tab != "evolution" or key != "species":
                     self.draw_button(app, key, title)
@@ -613,7 +637,8 @@ class FloatingPanel(ObservatoryPanel):
         if self.pending:
             # The world continues behind confirmation; only input is modal.
             app.glass.draw(app.screen, self.confirm_rect, "confirm", app.ui_time)
-            app.label("Replace active experiment?", self.confirm_rect.x+22, self.confirm_rect.y+18, 20)
+            recovering = bool(app.recovery and app.recovery.pending_choice)
+            app.label("World recovery" if recovering else "Replace active experiment?", self.confirm_rect.x+22, self.confirm_rect.y+18, 20)
             self.wrap(app, self.confirm_text, self.confirm_rect.x+22, self.confirm_rect.y+56, self.confirm_rect.w-44, TEXT)
-            for key, title in (("cancel", "Cancel"), ("confirm", "Replace experiment")):
+            for key, title in (("cancel", "Start fresh" if recovering else "Cancel"), ("confirm", "Resume previous world" if recovering else "Replace experiment")):
                 button(app, self.buttons[key], title, key == "confirm", self.keyboard_focus == key)

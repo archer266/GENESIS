@@ -6,11 +6,12 @@ import unittest
 import pygame
 from genesis.app import App
 from genesis.persistence import document
+from genesis.observatory import ExperimentSettings
 
 
 class RefinementTests(unittest.TestCase):
     def setUp(self):
-        self.app = App()
+        self.app = App(settings=ExperimentSettings())
         self.p = self.app.observatory
         self.p.show(self.app, "settings")
 
@@ -19,6 +20,32 @@ class RefinementTests(unittest.TestCase):
 
     def key(self, key, mod=0):
         self.app.handle_event(pygame.event.Event(pygame.KEYDOWN, key=key, mod=mod))
+
+    def test_only_corrected_rules_and_draft_isolation(self):
+        p,a=self.p,self.app
+        before=document(a.world,a.sim_clock,a.history)
+        self.assertNotIn('rules_version',p.content_buttons)
+        self.assertNotIn('rules_version',p.content_inputs)
+        self.assertEqual(p.draft_settings().rules_version,2)
+        p.activate(a,'defaults')
+        self.assertEqual(p.draft_settings().rules_version,2)
+        self.assertEqual(document(a.world,a.sim_clock,a.history),before)
+        p.activate(a,'start')
+        self.assertIsNotNone(p.pending)
+        p.activate(a,'cancel')
+        self.assertEqual(document(a.world,a.sim_clock,a.history),before)
+
+    def test_obsolete_load_retains_current_world_and_only_corrected_presets(self):
+        from pathlib import Path
+        from genesis.presets import display_presets
+        a=self.app
+        before=document(a.world,a.sim_clock,a.history)
+        self.assertFalse(a.load_file(Path(__file__).parent/'fixtures'/'phase10_world_v6.json'))
+        self.assertTrue(a.observatory.world_notice_error)
+        self.assertIn('obsolete',a.observatory.world_notice)
+        self.assertEqual(document(a.world,a.sim_clock,a.history),before)
+        self.assertEqual([p.name for _,p in display_presets()],['Living Ecosystem','Living Seasons'])
+        self.assertTrue(all(p.settings.rules_version==2 for _,p in display_presets()))
 
     def test_toggles_conditional_fields_retained_drafts_and_effective_settings(self):
         p, a = self.p, self.app

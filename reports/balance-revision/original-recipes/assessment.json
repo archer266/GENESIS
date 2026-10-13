@@ -1,0 +1,26 @@
+{
+  "groups": {
+    "original-coexistence": {
+      "n": 1,
+      "persistent": 0,
+      "active": 0,
+      "diverse": 0,
+      "cap_ok": 0
+    },
+    "original-default": {
+      "n": 1,
+      "persistent": 0,
+      "active": 0,
+      "diverse": 0,
+      "cap_ok": 1
+    },
+    "original-environment": {
+      "n": 1,
+      "persistent": 0,
+      "active": 0,
+      "diverse": 0,
+      "cap_ok": 1
+    }
+  },
+  "acceptance_passed": false
+}

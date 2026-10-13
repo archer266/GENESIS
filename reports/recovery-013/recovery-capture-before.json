@@ -1,0 +1,13 @@
+{
+  "population": 281,
+  "lineage": 4096,
+  "history": 3601,
+  "capture_ms": [
+    107.848,
+    104.163,
+    104.839,
+    105.171,
+    105.397
+  ],
+  "fixture": "Mature archive; food raised to 80/s solely to construct a near-cap benchmark workload."
+}

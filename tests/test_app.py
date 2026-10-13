@@ -95,7 +95,7 @@ class AppTests(unittest.TestCase):
             self.event(pygame.MOUSEWHEEL,y=-50,pos=p.content.center)
             self.assertEqual(p.scrolls[tab],p.scroll_max)
             a.draw()
-        for i in range(len(PRESETS)):
+        for i in (index for index, preset in enumerate(PRESETS) if preset.settings.rules_version == 2):
             p.show(a,"settings")
             self.control("preset_"+str(i))
             self.assertEqual(p.values,PRESETS[i].settings.text_values())
@@ -170,14 +170,14 @@ class AppTests(unittest.TestCase):
         self.assertEqual(a.seed,42)
         self.control("confirm")
         self.assertEqual(a.seed,7)
-        self.assertEqual(len(a.world.organisms),25)
+        self.assertEqual(len(a.world.organisms),25+a.settings.initial_predators)
         a.world.organisms.clear()
         p.opened=False
         a.draw()
         self.control("restart")
         self.assertFalse(a.world.organisms)
         self.control("confirm")
-        self.assertEqual(len(a.world.organisms),25)
+        self.assertEqual(len(a.world.organisms),25+a.settings.initial_predators)
 
     def test_draft_validation_keyboard_focus_new_seed_and_defaults(self):
         a,p=self.app,self.panel

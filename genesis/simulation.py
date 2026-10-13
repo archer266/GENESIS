@@ -59,8 +59,11 @@ class Config:
     droughts_enabled: bool = False
     drought_duration: int = 15
     drought_interval: int = 90
+    rules_version: int = 1
 
     def __post_init__(self):
+        if type(self.rules_version) is not int or self.rules_version not in (1, 2):
+            raise ValueError("Simulation rules must be Classic (1) or Ecology (2)")
         validate_settings(self)
         if type(self.habitat_enabled) is not bool or type(self.map_seed) is not int or not 0 <= self.map_seed <= 4294967295:
             raise ValueError("Habitat mode must be boolean and map seed an integer from 0 to 4294967295")
@@ -153,6 +156,7 @@ class World:
         self.births = 0
         self.deaths = 0
         self.catches = 0
+        self.handling = {}
         self.events: list[SimulationEvent] = []
         self.lineage = LineageArchive()
         self.diagnostics = Diagnostics()
@@ -161,7 +165,7 @@ class World:
         c = self.config
         self.habitats = habitats or HabitatMap.generate(c.width, c.height, c.habitat_enabled, c.map_seed)
         for _ in range(c.initial_population):
-            traits = Traits(self.rng.uniform(28, 52), self.rng.uniform(60, 120), self.rng.uniform(4, 6.5))
+            traits = Traits(self.rng.uniform(28, 52), self.rng.uniform(60, 120), self.rng.uniform(3.3, 8.7) if c.rules_version == 2 else self.rng.uniform(4, 6.5))
             self.add_organism(self.rng.uniform(10, c.width - 10),
                               self.rng.uniform(10, c.height - 10), traits)
         for _ in range(c.initial_food):
@@ -179,6 +183,9 @@ class World:
     @property
     def event_time(self):
         return (self.ticks + int(self._stepping)) * self.config.timestep
+
+    def maximum_age(self, species):
+        return self.config.max_age * (2 if self.config.rules_version == 2 and species == "predator" else 1)
 
     def add_organism(self, x: float, y: float, traits: Traits | None = None,
                      energy: float | None = None, **kwargs) -> Organism:
@@ -240,33 +247,45 @@ class World:
 
     def _reproduce(self, parent: Organism) -> Organism | None:
         c = self.config
-        if (len(self.organisms) >= c.population_cap and parent.energy >= c.reproduction_threshold
-                and parent.age >= c.maturity_age and parent.cooldown <= 0):
+        hunter = c.rules_version == 2 and parent.species == "predator"
+        threshold = 160.0 if hunter else c.reproduction_threshold
+        maturity = 20.0 if hunter else c.maturity_age
+        transfer = 80.0 if hunter else c.offspring_energy
+        cooldown = 45.0 if hunter else c.reproduction_cooldown
+        if (len(self.organisms) >= c.population_cap and parent.energy >= threshold
+                and parent.age >= maturity and parent.cooldown <= 0):
             self.diagnostics.totals[parent.species]["population_cap_blocks"] += 1
-        if (len(self.organisms) >= c.population_cap or parent.energy < c.reproduction_threshold
-                or parent.age < c.maturity_age or parent.cooldown > 0):
+        if (len(self.organisms) >= c.population_cap or parent.energy < threshold
+                or parent.age < maturity or parent.cooldown > 0):
             return None
         if parent.species == "predator" and sum(o.species == "predator" for o in self.organisms.values()) >= c.predator_cap:
             self.diagnostics.totals[parent.species]["predator_cap_blocks"] += 1
             return None
-        traits = parent.traits.mutated(self.rng, c.mutation_strength)
+        if c.rules_version == 2:
+            from .ecology import mutate
+            traits = mutate(parent.traits, self.rng, c.mutation_strength)
+        else:
+            traits = parent.traits.mutated(self.rng, c.mutation_strength)
         angle = self.rng.uniform(-math.pi, math.pi)
         offset = parent.traits.size + traits.size + 2
         x = max(traits.size, min(c.width - traits.size, parent.x + math.cos(angle) * offset))
         y = max(traits.size, min(c.height - traits.size, parent.y + math.sin(angle) * offset))
-        parent.energy -= c.offspring_energy + c.reproduction_cost
+        parent.energy -= transfer + c.reproduction_cost
         ledger = self.diagnostics.totals[parent.species]
         ledger["reproduction_spent"] += c.reproduction_cost
-        ledger["offspring_transferred"] += c.offspring_energy
-        parent.cooldown = c.reproduction_cooldown
-        child = self.add_organism(x, y, traits, c.offspring_energy, generation=parent.generation + 1,
-                                  parent_id=parent.id, cooldown=c.reproduction_cooldown, species=parent.species)
+        ledger["offspring_transferred"] += transfer
+        parent.cooldown = cooldown
+        child = self.add_organism(x, y, traits, transfer, generation=parent.generation + 1,
+                                  parent_id=parent.id, cooldown=cooldown, species=parent.species)
         self.births += 1
         self.events.append(SimulationEvent("birth", child.id, child.x, child.y, child.traits))
         return child
 
     def step(self):
         """Advance exactly one fixed tick; newborns first act on the next tick."""
+        if self.config.rules_version == 2:
+            from .ecology import step
+            return step(self)
         c = self.config
         dt = c.timestep
         self.events.clear()

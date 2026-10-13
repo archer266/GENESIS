@@ -1,0 +1,22 @@
+{
+  "mode": "relaunch",
+  "frozen": true,
+  "executable": "C:\\Users\\Admin\\AppData\\Local\\Temp\\GENESIS release \u03a9 970345a1\\GENESIS\\GENESIS.exe",
+  "pygame_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\GENESIS release \u03a9 970345a1\\GENESIS\\_internal\\pygame\\__init__.py",
+  "cwd": "C:\\Users\\Admin\\AppData\\Local\\Temp\\GENESIS release \u03a9 970345a1",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13600K",
+  "os": "Windows-10-10.0.26200-SP0",
+  "python": "3.11.2",
+  "pygame": "2.6.1",
+  "sdl": [
+    2,
+    28,
+    4
+  ],
+  "display_driver": "windows",
+  "checks": [
+    "Preferences restored across separate process launches",
+    "Recovery offered and resumed paused across process launches"
+  ],
+  "passed": true
+}

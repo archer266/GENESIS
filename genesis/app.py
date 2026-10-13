@@ -1,6 +1,7 @@
-"""Pygame presentation and input. All ecosystem rules live in simulation.py."""
+"""Pygame presentation/input; simulation.py and ecology.py own ecosystem rules."""
 
-import argparse
+from dataclasses import replace
+from .ecology import recommended_settings
 import math
 import logging
 from .user_files import Preferences, window_geometry, writable_destination
@@ -19,6 +20,7 @@ from .glass import Glass, button as glass_button, speed_segments
 from .presets import preset_name
 from .persistence import SaveError, load_world, save_world
 from .camera import Camera
+from .recovery import Recovery, find_recovery
 
 
 BG = (5, 10, 27)
@@ -33,13 +35,14 @@ class App:
     def __init__(self, seed: int = 42, settings: ExperimentSettings | None = None, preferences: Preferences | None = None):
         pygame.init()
         self.preferences = preferences
+        self.recovery = Recovery(preferences.root, preferences.values["autosave"]) if preferences else None
         pygame.display.set_caption(f"GENESIS {__version__}")
         icon = Path(__file__).parent / "assets" / "genesis.png"
         if icon.exists():
             pygame.display.set_icon(pygame.image.load(str(icon)))
         self.screen = pygame.display.set_mode((1380, 900), pygame.RESIZABLE)
         self.fonts = {size: pygame.font.SysFont("Segoe UI,Arial", size+1 if size <= 17 else size) for size in (13, 15, 17, 20, 26, 34)}
-        self.settings = settings or ExperimentSettings(seed=seed)
+        self.settings = replace(settings, rules_version=2) if settings else replace(recommended_settings(), seed=seed)
         self.seed = self.settings.seed
         self.world = World(self.seed, self.settings.config())
         self.visuals = VisualState(self.world)
@@ -97,7 +100,7 @@ class App:
         p = dict(self.preferences.values)
         size = self.windowed_size if self.fullscreen else self.screen.get_size()
         position = self.windowed_position if self.fullscreen else Window.from_display_module().position
-        p.update(effects=self.visuals.enabled, habitats=self.show_habitats,
+        p.update(autosave=self.recovery.enabled if self.recovery else p["autosave"], effects=self.visuals.enabled, habitats=self.show_habitats,
                  environment=self.show_environment, reduced=self.glass.reduced,
                  fullscreen=self.fullscreen, guide_seen=True, window_size=list(size),
                  window_position=list(position), panel_rect=list(self.observatory.rect),
@@ -210,6 +213,7 @@ class App:
         self.start_experiment(self.settings)
 
     def start_experiment(self, settings):
+        settings = replace(settings, rules_version=2)
         self.settings = settings
         self.seed = settings.seed
         self.world = World(self.seed, settings.config())
@@ -226,6 +230,7 @@ class App:
         self.observatory.notice_error = False
         self.observatory.saved_path = None
         self._layout()
+        self.establish_recovery()
 
     def on_step(self, world):
         self.history.on_step(world)
@@ -263,6 +268,10 @@ class App:
 
     def apply_loaded(self, loaded, path):
         panel = self.observatory
+        if loaded.world.config.rules_version != 2:
+            panel.world_notice = "This world uses obsolete simulation rules. Start a new corrected ecosystem instead."
+            panel.world_notice_error = True
+            return False
         visuals = VisualState(loaded.world, enabled=self.visuals.enabled)
         self.settings, self.seed = loaded.settings, loaded.settings.seed
         self.world, self.history, self.sim_clock = loaded.world, loaded.history, loaded.clock
@@ -279,7 +288,41 @@ class App:
         panel.world_notice = f"Loaded PAUSED at t={self.world.time:.2f}s. Resume to continue.\n{Path(path).resolve()}"
         panel.world_notice_error = False
         self._layout()
+        self.establish_recovery()
         return True
+
+    def establish_recovery(self):
+        if self.recovery:
+            self.recovery.changed_world()
+            self.recovery.tick(self.world, self.sim_clock, self.history, self.selected_id)
+
+    def offer_recovery(self):
+        if not self.recovery:
+            return
+        loaded, path, reason = find_recovery(self.recovery.root)
+        if loaded is None:
+            if reason:
+                self.recovery.status, self.recovery.error = reason, True
+            return
+        self.recovery.pending_choice = True
+        self._recovery_candidate = (loaded, path)
+        self.observatory.confirm(self, f"Resume seed {loaded.settings.seed} at {loaded.world.time:.1f}s, paused? {reason}", lambda: self.choose_recovery(True))
+
+    def choose_recovery(self, resume):
+        if not self.recovery or not self.recovery.pending_choice:
+            return
+        self.recovery.pending_choice = False
+        self.observatory.pending = None
+        if resume:
+            self.apply_loaded(*self._recovery_candidate)
+        else:
+            self.establish_recovery()
+        self._recovery_candidate = None
+        self._discard_elapsed = True
+
+    def close_recovery(self):
+        if self.recovery:
+            self.recovery.close(self.world, self.sim_clock, self.history, self.selected_id)
 
     def handle_event(self, event):
         self._layout()
@@ -410,8 +453,11 @@ class App:
         self.notice_remaining = max(0, self.notice_remaining - elapsed)
         if not self.sim_clock.paused:
             self.visuals.advance(elapsed)
-        self.sim_clock.advance(elapsed)
+        if not (self.recovery and self.recovery.pending_choice):
+            self.sim_clock.advance(elapsed)
         self.update_camera(elapsed)
+        if self.recovery:
+            self.recovery.tick(self.world, self.sim_clock, self.history, self.selected_id)
 
     def update_camera(self, elapsed):
         target = self.world.organisms.get(self.follow_id)
@@ -525,10 +571,10 @@ class App:
         self.divider(y + 145)
         self.label("AVERAGE INHERITED TRAITS", x, y + 157, 13, ACCENT)
         average = self.world.averages()
-        for offset, label, value, unit in ((182, "Movement", average.speed, "u/s"),
+        for offset, label, value, unit in ((182, "Speed trait", average.speed, "u/s"),
                                            (207, "Sensing radius", average.sense, "u"),
                                            (232, "Body radius", average.size, "u")):
-            color = PALETTE[3] if label == "Movement" else (PALETTE[4] if label == "Sensing radius" else PALETTE[1])
+            color = PALETTE[3] if label == "Speed trait" else (PALETTE[4] if label == "Sensing radius" else PALETTE[1])
             self.row(label, f"{value:.1f} {unit}" if self.world.organisms else "—", y + offset, color)
         self.divider(y + 262)
         self.label("ORGANISM INSPECTOR", x, y + 274, 13, ACCENT)
@@ -540,13 +586,22 @@ class App:
             bar = pygame.Rect(x, y + 350, self.sidebar.width - 40, 5)
             pygame.draw.rect(self.screen, LINE, bar, border_radius=2)
             pygame.draw.rect(self.screen, organism_color(selected), (bar.x, bar.y, max(0, round(bar.width * selected.energy / self.world.config.energy_capacity)), 5), border_radius=2)
-            self.row("Age", f"{selected.age:.1f} / {self.world.config.max_age:.0f} s", y + 367)
-            self.row("Movement", f"{selected.traits.speed:.2f} u/s", y + 390)
+            self.row("Age", f"{selected.age:.1f} / {self.world.maximum_age(selected.species):.0f} s", y + 367)
+            self.row("Speed trait", f"{selected.traits.speed:.2f} u/s", y + 390)
             self.row("Sensing radius", f"{selected.traits.sense:.2f} u", y + 413)
             self.row("Body radius", f"{selected.traits.size:.2f} u", y + 436)
             parent = f"#{selected.parent_id:04d}" if selected.parent_id else "Founder"
             habitat = LABELS[self.world.habitats.region_at(selected.x, selected.y)]
             self.row("Parent / habitat", f"{parent} / {habitat}", y + 459)
+            if self.world.config.rules_version == 2:
+                if selected.species == "predator":
+                    remaining = self.world.handling.get(selected.id, 0)
+                    activity = f"Digesting / {remaining:.1f} s" if remaining else "Satiated" if selected.energy >= 170 else "Seeking prey"
+                    self.row("Activity", activity, y + 482)
+                else:
+                    from .ecology import efficiencies
+                    foods = (name for name, efficiency in zip(("Small", "Medium", "Large"), efficiencies(selected.traits.size)) if efficiency >= .25)
+                    self.row("Digestible food", " / ".join(foods), y + 482)
         else:
             self.label("Organism has died." if self.selected_id else "Click an organism to inspect it.", x, y + 307, 15)
             self.label("Its ring shows the sensing radius.", x, y + 335, 13, MUTED)
@@ -557,11 +612,11 @@ class App:
         if legend_y < y + 500:
             return
         self.divider(legend_y - 12)
-        self.label("COLOR = INHERITED SPEED", x, legend_y, 13, MUTED)
+        self.label("COLOR = INHERITED BODY SIZE", x, legend_y, 13, MUTED)
         palette = PREDATOR_PALETTE if selected and selected.species == "predator" else PALETTE
         for i, color in enumerate(palette):
             pygame.draw.rect(self.screen, color, (x + i * 52, legend_y + 26, 46, 4), border_radius=2)
-        self.label("<33    33–39    39–45    45–51    ≥51", x, legend_y + 38, 13, MUTED)
+        self.label("3         4.5         6         7.5         9", x, legend_y + 38, 13, MUTED)
 
     def run(self, frames: int | None = None, screenshot: str | None = None):
         render_clock = pygame.time.Clock()
@@ -585,37 +640,18 @@ class App:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 pygame.image.save(self.screen, str(path))
         finally:
+            self.close_recovery()
             self.save_preferences()
             pygame.quit()
 
 
 def main():
-    parser = argparse.ArgumentParser(description="GENESIS - an evolving artificial life ecosystem")
-    parser.add_argument("--seed", type=int, default=42, help="Reproducible world seed (default: 42)")
-    parser.add_argument("--population", type=int, default=100, help="Starting cells, 1-300 (default: 100)")
-    parser.add_argument("--food-rate", type=float, default=20, help="Food regenerated per simulation second, 0-80")
-    parser.add_argument("--mutation-percent", type=float, default=6, help="Maximum inherited mutation percent, 0-20")
-    parser.add_argument("--predators", type=int, default=None, help="Enable predator mode with 0-40 starting hunters")
-    parser.add_argument("--habitats", action="store_true", help="Enable the seeded patchwork habitat map")
-    parser.add_argument("--map-seed", type=int, default=42, help="Independent habitat map seed, 0-4294967295")
-    parser.add_argument("--seasons", action="store_true", help="Enable smooth seasonal food variation")
-    parser.add_argument("--season-length", type=int, default=120, help="Full seasonal cycle in simulation seconds, 40-600")
-    parser.add_argument("--droughts", action="store_true", help="Enable reproducibly scheduled droughts")
-    parser.add_argument("--drought-duration", type=int, default=15, help="Drought length in simulation seconds, 5-60")
-    parser.add_argument("--drought-interval", type=int, default=90, help="Minimum drought-free gap in seconds, 30-300; maximum twice this")
-    parser.add_argument("--frames", type=int, help="Exit after this many rendered frames (smoke checks)")
-    parser.add_argument("--screenshot", help="Save a PNG on exit")
-    parser.add_argument("--load", metavar="PATH", help="Load a versioned JSON world, paused")
-    args = parser.parse_args()
-    try:
-        settings = ExperimentSettings(args.seed, args.population, args.food_rate, args.mutation_percent / 100,
-                                      args.predators is not None, args.predators if args.predators is not None else 0,
-                                      args.habitats, args.map_seed, args.seasons, args.season_length,
-                                      args.droughts, args.drought_duration, args.drought_interval)
-    except ValueError as error:
-        parser.error(str(error))
+    from .launch_options import parse_options
+    parser, args, settings = parse_options()
     app = App(settings=settings, preferences=Preferences())
     if args.load and not app.load_file(args.load):
         pygame.quit()
         parser.exit(2, app.observatory.world_notice + "\n")
+    if not args.load:
+        app.offer_recovery()
     app.run(args.frames, args.screenshot)

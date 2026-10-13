@@ -138,7 +138,8 @@ class Diagnostics:
                 require(t['observed_initial']==expected and t['initial_energy']==expected*world.config.initial_energy, "founder energy/count")
             deaths=sum(t['deaths_'+cause] for cause in ('energy','age','caught'))
             require(t['observed_initial']+t['births']-deaths == len(group), "species accounting")
-            require(t['offspring_transferred'] == t['births']*world.config.offspring_energy, "offspring transfer")
+            offspring_energy = 80 if world.config.rules_version == 2 and s == 'predator' else world.config.offspring_energy
+            require(t['offspring_transferred'] == t['births']*offspring_energy, "offspring transfer")
             require(t['reproduction_spent'] == t['births']*world.config.reproduction_cost, "reproduction expense")
             balance=t['initial_energy']+t['feeding_gained']-t['metabolism_spent']-t['reproduction_spent']-t['death_energy_removed']
             require(math.isclose(balance,sum(o.energy for o in group),rel_tol=1e-8,abs_tol=1e-5), "energy balance")

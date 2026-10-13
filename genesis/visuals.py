@@ -12,6 +12,7 @@ import math
 import pygame
 
 from .simulation import Traits, World
+from .sprite_cache import surface_cache
 
 
 PALETTE = ((54, 230, 255), (179, 255, 75), (255, 165, 58), (255, 78, 169), (163, 104, 255))
@@ -21,17 +22,23 @@ HABITAT_COLORS = ((106, 181, 217), (63, 220, 175), (171, 131, 239))
 
 
 def color_index(traits: Traits) -> int:
-    # Explicit, stable speed bands; founders already span all five hues.
-    return sum(traits.speed >= threshold for threshold in (33, 39, 45, 51))
+    # Stable full-domain mapping. 33 quantized colors bound sprite keys.
+    low, high = Traits.BOUNDS["size"]
+    return max(0, min(32, round((traits.size-low)/(high-low)*32)))
+
+
+def palette_color(index, palette=PALETTE):
+    position=max(0,min(32,index))/8
+    left=min(3,int(position)); fraction=position-left
+    return tuple(round(a+(b-a)*fraction) for a,b in zip(palette[left],palette[left+1]))
 
 
 def trait_color(traits: Traits) -> tuple[int, int, int]:
-    return PALETTE[color_index(traits)]
+    return palette_color(color_index(traits))
 
 
 def organism_color(organism):
-    palette = PREDATOR_PALETTE if organism.species == "predator" else PALETTE
-    return palette[color_index(organism.traits)]
+    return palette_color(color_index(organism.traits), PREDATOR_PALETTE if organism.species == "predator" else PALETTE)
 
 
 @dataclass(frozen=True)
@@ -100,7 +107,7 @@ class VisualState:
             if event.kind == "eat":
                 self.effects.append(Effect("eat", event.x, event.y, GOLD, self.time, 0.38))
             elif event.kind == "catch":
-                self.effects.append(Effect("catch", event.x, event.y, PREDATOR_PALETTE[color_index(event.traits)], self.time, .4))
+                self.effects.append(Effect("catch", event.x, event.y, palette_color(color_index(event.traits), PREDATOR_PALETTE), self.time, .4))
             elif event.kind == "birth":
                 self.effects.append(Effect("birth", event.x, event.y, color, self.time, 0.6))
             elif event.kind == "death":
@@ -120,10 +127,10 @@ class VisualState:
                     previous.heading + turn * alpha)
 
 
-@lru_cache(maxsize=96)
+@surface_cache()
 def cell_sprite(index: int, radius: int, pulse: int, glow: bool) -> pygame.Surface:
-    """Quantized radius/pulse and five colors keep the LRU strictly bounded."""
-    color = PALETTE[index]
+    """Quantized radius/pulse and 33 colors keep the LRU strictly bounded."""
+    color = palette_color(index)
     body = radius + pulse * 0.16
     extent = math.ceil(radius * 2.8 + 3)
     surface = pygame.Surface((extent * 2 + 1, extent * 2 + 1), pygame.SRCALPHA)
@@ -155,10 +162,10 @@ def food_sprite(size: int, glow: bool) -> pygame.Surface:
     return surface
 
 
-@lru_cache(maxsize=96)
+@surface_cache()
 def predator_sprite(index: int, radius: int, pulse: int, glow: bool) -> pygame.Surface:
-    """Angular luminous hunters; warm-to-violet bands still encode speed."""
-    color = PREDATOR_PALETTE[index]
+    """Angular luminous hunters; inherited body size selects the warm palette."""
+    color = palette_color(index, PREDATOR_PALETTE)
     extent = math.ceil(radius * 2.8 + 3)
     surface = pygame.Surface((extent * 2 + 1, extent * 2 + 1), pygame.SRCALPHA)
     body = radius + pulse * .16
@@ -304,6 +311,8 @@ class EcosystemRenderer:
         screen.blit(self.overlay, viewport)
         sparkle = food_sprite(max(2, min(24, round(3 * scale))), state.enabled)
         for food in world.food.values():
+            if world.config.rules_version == 2:
+                sparkle = food_sprite(max(2, min(24, round((2.3 + .7*((food.id-1)%3)) * scale))), state.enabled)
             lx, ly = local(food.x, food.y)
             if not visible(lx, ly, sparkle.get_width()):
                 continue

@@ -1,0 +1,19 @@
+{
+  "groups": {
+    "normal-rules2": {
+      "n": 1,
+      "persistent": 1,
+      "active": 1,
+      "diverse": 1,
+      "cap_ok": 1
+    },
+    "stress-rules2": {
+      "n": 1,
+      "persistent": 0,
+      "active": 0,
+      "diverse": 1,
+      "cap_ok": 0
+    }
+  },
+  "acceptance_passed": false
+}

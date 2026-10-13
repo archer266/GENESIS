@@ -19,7 +19,7 @@ from .environment import Environment, EnvironmentEvent, DEFAULTS, STAT_DEFAULTS,
 
 
 FORMAT = "genesis-world"
-VERSION = 6
+VERSION = 7
 MAX_BYTES = 16 * 1024 * 1024
 MAX_COUNT = 10**12
 
@@ -37,13 +37,14 @@ class LoadedWorld:
     selected_id: int | None
 
 
-def document(world, clock, history, selected_id=None):
+def document(world, clock, history, selected_id=None, *, defer_archives=False):
     """Copy a coherent between-ticks checkpoint without mutating any inputs."""
     return {
+        "ecology": {"handling": {str(k): v for k,v in world.handling.items()}},
         "format": FORMAT, "version": VERSION, "application_version": __version__,
         "settings": asdict(history.settings), "preset": preset_name(history.settings),
         "config": asdict(world.config), "habitats": world.habitats.document(),
-        "lineage": world.lineage.document(),
+        "lineage": world.lineage.document(defer_records=defer_archives),
         "environment": world.environment.document(),
         "diagnostics": world.diagnostics.document(),
         "world": {"ticks": world.ticks, "births": world.births, "deaths": world.deaths, "catches": world.catches,
@@ -55,7 +56,7 @@ def document(world, clock, history, selected_id=None):
         "history": {"capacity": history.samples.maxlen, "interval_ticks": history.interval_ticks,
                     "dropped_samples": history.dropped_samples, "revision": history.revision,
                     "last_seen_tick": history._last_seen_tick, "baseline": asdict(history.baseline),
-                    "samples": [asdict(sample) for sample in history.samples]},
+                    "samples": list(history.samples) if defer_archives else [asdict(sample) for sample in history.samples]},
         "selection": selected_id if selected_id in world.organisms else None,
     }
 
@@ -337,16 +338,25 @@ def restore(data) -> LoadedWorld:
     """Validate all content before returning an isolated, paused candidate world."""
     require(isinstance(data, dict), "Save must contain a JSON object.")
     require(data.get("format") == FORMAT, "This is not a GENESIS world file.")
+    if type(data.get("version")) is int and 1 <= data["version"] <= 6:
+        data = deepcopy(data)
+        for key in ("settings", "config"):
+            require(isinstance(data.get(key), dict) and "rules_version" not in data[key], "Invalid legacy rules settings.")
+            data[key]["rules_version"] = 1
     if type(data.get("version")) is int and data["version"] == 1:
         data = migrate_v1(data)
     if type(data.get("version")) is int and data["version"] == 2:
         data = migrate_v2(data)
-    require(type(data.get("version")) is int and data["version"] in (3, 4, 5, VERSION),
+    require(type(data.get("version")) is int and data["version"] in (3, 4, 5, 6, VERSION),
             f"Unsupported save version {data.get('version')!r}; supported versions are 1 through {VERSION}.")
+    legacy_rules = data["version"] < 7
     legacy_lineage = data["version"] == 3
     legacy_environment = data["version"] < 5
     legacy_diagnostics = data["version"] < 6
-    fields(data, ("format", "version", "application_version", "settings", "preset", "config", "habitats", "world", "clock", "history", "selection") + (() if legacy_lineage else ("lineage",)) + (() if legacy_environment else ("environment",)) + (() if legacy_diagnostics else ("diagnostics",)), "save")
+    fields(data, ("format", "version", "application_version", "settings", "preset", "config", "habitats", "world", "clock", "history", "selection") + (() if legacy_lineage else ("lineage",)) + (() if legacy_environment else ("environment",)) + (() if legacy_diagnostics else ("diagnostics",)) + (() if legacy_rules else ("ecology",)), "save")
+    if legacy_rules:
+        data = deepcopy(data)
+        data["ecology"] = {"handling": {}}
     if legacy_environment:
         data = deepcopy(data)
         for key, schema in (("settings", ExperimentSettings.__dataclass_fields__), ("config", asdict(ExperimentSettings().config()))):
@@ -415,9 +425,10 @@ def restore(data) -> LoadedWorld:
         number(item["y"], traits.size, config.height - traits.size, "organism y")
         number(item["heading"], -math.pi, math.pi, "heading")
         number(item["energy"], 0, config.energy_capacity, "energy")
-        number(item["age"], 0, config.max_age, "age")
-        require(item["energy"] > 0 and item["age"] < config.max_age, "Saved living organism is already dead.")
-        number(item["cooldown"], 0, config.reproduction_cooldown, "reproduction cooldown")
+        maximum_age = world.maximum_age(item["species"])
+        number(item["age"], 0, maximum_age, "age")
+        require(item["energy"] > 0 and item["age"] < maximum_age, "Saved living organism is already dead.")
+        number(item["cooldown"], 0, 45 if config.rules_version == 2 and item["species"] == "predator" else config.reproduction_cooldown, "reproduction cooldown")
         number(item["wander_turn"], -1.8, 1.8, "wander turn")
         number(item["wander_timer"], 0, 1.4, "wander timer")
         generation = integer(item["generation"], 0, births, "generation")
@@ -427,6 +438,17 @@ def restore(data) -> LoadedWorld:
             integer(item["parent_id"], 1, oid - 1, "parent ID")
             require(generation > 0, "Offspring generation must be positive.")
         world.organisms[oid] = Organism(**{**item, "traits": traits})
+    ecological = fields(data["ecology"], ("handling",), "ecology")
+    require(isinstance(ecological["handling"], dict), "Invalid handling state.")
+    require(config.rules_version == 2 or not ecological["handling"], "Handling state in Classic world.")
+    world.handling = {}
+    for key, value in ecological["handling"].items():
+        require(isinstance(key, str) and key.isascii() and key.isdecimal() and str(int(key)) == key, "Invalid handling ID.")
+        oid = int(key)
+        require(oid in world.organisms and world.organisms[oid].species == "predator", "Handling target must be a living predator.")
+        remaining = number(value, 0, 10.5, "handling time")
+        require(remaining > 0, "Empty handling interval.")
+        world.handling[oid] = remaining
     for organism in world.organisms.values():
         parent = world.organisms.get(organism.parent_id)
         if parent:
@@ -443,6 +465,11 @@ def restore(data) -> LoadedWorld:
         food = Food(**item)
         world.food[fid] = food
         world._food_grid.setdefault(world._cell(food.x, food.y), {})[fid] = food
+    if config.rules_version == 2:
+        for kind in range(3):
+            limit = config.food_cap//3 + int(kind < config.food_cap%3)
+            require(sum((f.id-1)%3 == kind for f in world.food.values()) <= limit,
+                    "Food resource capacity exceeded.")
     rng = raw["rng_state"]
     require(isinstance(rng, (list, tuple)) and len(rng) == 3 and type(rng[0]) is int and rng[0] == 3, "Invalid RNG state version.")
     require(isinstance(rng[1], (list, tuple)) and len(rng[1]) == 625, "Invalid RNG state size.")
@@ -537,13 +564,24 @@ def load_world(path) -> LoadedWorld:
 
 
 def save_world(path, world, clock, history, selected_id=None) -> Path:
+    return save_document(path, document(world, clock, history, selected_id))
+
+
+def encode_document(data):
+    restore(data)  # Validate before any existing file is replaced.
+    content = json.dumps(data, allow_nan=False, indent=2)
+    require(len(content.encode("utf-8")) <= MAX_BYTES, "Save exceeds the 16 MiB size limit.")
+    return content
+
+
+def save_document(path, data):
+    return atomic_write(path, encode_document(data))
+
+
+def atomic_write(path, content) -> Path:
     temporary = None
     try:
         target = Path(path).expanduser().resolve()
-        data = document(world, clock, history, selected_id)
-        restore(data)  # Refuse to replace a good save with invalid model state.
-        content = json.dumps(data, allow_nan=False, indent=2)
-        require(len(content.encode("utf-8")) <= MAX_BYTES, "Save exceeds the 16 MiB size limit.")
         target.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=target.parent,
                                          prefix=f".{target.name}.", suffix=".tmp", delete=False) as handle:

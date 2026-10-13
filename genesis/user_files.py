@@ -9,7 +9,7 @@ import sys
 import tempfile
 
 DEFAULTS = dict(version=1, effects=True, habitats=True, environment=True,
-                reduced=False, fullscreen=False, guide_seen=False,
+                reduced=False, fullscreen=False, guide_seen=False, autosave=True,
                 window_size=[1380, 900], window_position=[60, 40],
                 panel_rect=[880, 24, 460, 620], panel_tab="settings",
                 panel_open=False, panel_minimized=False,

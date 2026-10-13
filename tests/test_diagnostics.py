@@ -38,6 +38,9 @@ class DiagnosticTests(unittest.TestCase):
         s=next(p.settings for p in PRESETS if p.name=='Coexistence')
         w=World(s.seed,s.config());h=History(w,s);c=SimulationClock(w,h.on_step)
         old=document(w,c,h);old['version']=5;old['preset']='Custom';del old['diagnostics']
+        old.pop("ecology",None)
+        old["settings"].pop("rules_version",None)
+        old["config"].pop("rules_version",None)
         loaded=restore(old)
         self.assertEqual(loaded.settings,s)
         self.assertTrue(loaded.world.diagnostics.legacy)
@@ -99,7 +102,7 @@ class DiagnosticTests(unittest.TestCase):
         spec=importlib.util.spec_from_file_location('phase8_reference',Path(__file__).parent/'fixtures/phase8_simulation.py')
         old=importlib.util.module_from_spec(spec);sys.modules[spec.name]=old;spec.loader.exec_module(old)
         w,h,c=experiment()
-        reference=old.World(w.seed,old.Config(**asdict(w.config)))
+        reference=old.World(w.seed,old.Config(**{k:v for k,v in asdict(w.config).items() if k in old.Config.__dataclass_fields__}))
         for _ in range(1200):
             w.step();reference.step()
         self.assertEqual([asdict(o) for o in w.organisms.values()],[asdict(o) for o in reference.organisms.values()])

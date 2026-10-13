@@ -131,6 +131,9 @@ class LineageTests(unittest.TestCase):
         for row in [v3["history"]["baseline"]]+[s["stats"] for s in v3["history"]["samples"]]:
             for key in STAT_DEFAULTS:
                 del row[key]
+        v3.pop("ecology",None)
+        v3["settings"].pop("rules_version",None)
+        v3["config"].pop("rules_version",None)
         worlds = [restore(v3)] + [load_world(Path(__file__).parent/"fixtures"/name) for name in ("phase3_world_v1.json", "phase4_world_v2.json", "phase6_world_v3.json")]
         for loaded in worlds:
             archive = loaded.world.lineage

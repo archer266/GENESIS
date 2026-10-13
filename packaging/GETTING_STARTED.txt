@@ -1,4 +1,4 @@
-GENESIS 0.11.0 — Desktop Release
+GENESIS 0.13.0 — Desktop Release
 
 Extract the entire ZIP to a folder you can read, then double-click GENESIS.exe.
 Keep GENESIS.exe beside its _internal folder. Python is not required to launch.
@@ -21,7 +21,11 @@ Default world and export folders: Worlds and Exports beneath that directory.
 You can choose other writable folders. The application folder is protected
 from user-data writes. The last successful destinations are remembered.
 Appearance, panel geometry/tab and window settings are saved on normal exit.
-Worlds are saved ONLY when you choose Save World: preferences do not save life.
+Autosave is on by default: changed worlds are checkpointed every two wall-clock
+minutes and on clean exit. Settings > Worlds can disable it. Startup offers
+Resume previous world (paused) or Start fresh. Recovery files live separately
+in %LOCALAPPDATA%\GENESIS\Recovery (latest.json and previous.json).
+Manual Save World remains available for permanent checkpoints.
 
 If startup fails, check genesis.log in the user directory. Moving or deleting
 preferences.json restores presentation defaults on the next launch.
@@ -31,3 +35,7 @@ Unsigned local build: this release is not code-signed or an installer.
 Validated on the development machine; not certified across Windows hardware.
 No automatic updates, network service, telemetry, or uploading is included.
 See THIRD_PARTY.txt and licenses for runtime dependency notices.
+
+The corrected Living Ecosystem is the default. Living Seasons adds stress.
+Color reflects inherited body size; predators are angular. Classic mode is
+not available. Worlds using obsolete rules cannot be resumed in this app.

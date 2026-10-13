@@ -1,0 +1,33 @@
+{
+  "platform": "Windows-10-10.0.26200-SP0",
+  "python": "3.11.2",
+  "fixture": "artifacts\\recovery-benchmark-world.json",
+  "population": 281,
+  "lineage": 4096,
+  "history": 3601,
+  "samples": [
+    {
+      "capture_ms": 5.424800008768216,
+      "write_ms": 398.17760000005364
+    },
+    {
+      "capture_ms": 7.000500016147271,
+      "write_ms": 617.6246000104584
+    },
+    {
+      "capture_ms": 6.3495000067632645,
+      "write_ms": 617.6582000043709
+    },
+    {
+      "capture_ms": 6.46130001405254,
+      "write_ms": 626.289200008614
+    },
+    {
+      "capture_ms": 6.452300003729761,
+      "write_ms": 618.2022000139114
+    }
+  ],
+  "foreground_probe_max_gap_ms": 20.598100003553554,
+  "foreground_probe_p95_gap_ms": 16.080500005045906,
+  "rng_and_model_unchanged": true
+}

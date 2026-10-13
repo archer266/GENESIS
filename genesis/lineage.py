@@ -97,10 +97,10 @@ class LineageArchive:
         return {name: getattr(child.traits, name)-getattr(parent.traits, name)
                 for name in ("speed", "sense", "size")}
 
-    def document(self):
+    def document(self, *, defer_records=False):
         return {"capacity": self.capacity, "pruned_count": self.pruned_count,
                 "legacy_unavailable": self.legacy_unavailable,
-                "records": [asdict(r) for r in self._records.values()]}
+                "records": list(self._records.values()) if defer_records else [asdict(r) for r in self._records.values()]}
 
     def export_csv(self, path, settings):
         path = Path(path).expanduser().resolve()

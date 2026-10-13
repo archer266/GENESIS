@@ -1,0 +1,10 @@
+# GENESIS status - 2026-10-13
+
+- Development preferences: targeted reads/searches, concise logs, focused tests first; one full suite for release integration. No screenshots/Computer Use unless essential; no unrelated refactoring or delegation.
+- Phase 11 COMPLETE: 0.13.0 World Recovery. Corrected ecosystem rules unchanged; authoritative save format 7 unchanged. No Classic desktop mode; obsolete-rule worlds rejected.
+- Recovery: default-on preference in Worlds, 120 monotonic wall-clock seconds when ticks/world epoch changed. Atomic latest.json + previous.json under per-user Recovery. Single worker, detached mutable snapshot plus immutable archive values. Pending startup choice blocks steps/writes; Resume paused or Start fresh. Load/new-world checkpoints and clean-exit flush respect disable. In-flight write may finish after disable; shutdown waits. Quiet status/errors and logs.
+- Tests: focused baseline 21 passed; focused integration 50 passed; one full release suite 194 passed in 155.187 s (artifacts/build-013.log).
+- Packaged native checks passed outside project with spaces/non-ASCII path and Python search paths removed: recovery across launches, autosave toggle, controls at normal/minimum sizes, fullscreen, preferences, saves/exports and continuation. Development machine only; no screenshots or render benchmarks this phase.
+- Save costs: 281 organisms, 4096 lineage, 3601 history; capture 5.4-7.0 ms (was ~105 ms); worker 398-626 ms. Synthetic high-food workload with mature real archives. Foreground scheduling probe is not an FPS measurement. Full report/raw data: reports/recovery-013/RESULTS.md.
+- Delivered: release/dist/GENESIS/GENESIS.exe and release/GENESIS-0.13.0-windows-x64.zip. README updated. No upload/publication. No work running.
+- Historical balance: reports/balance-revision/candidate14-heldout/RESULTS.md. Ten held-out seeds x 60 minutes: normal 10/10 persistence/activity/diversity; stress 9/10 persistence. No indefinite-survival guarantee. Prior render benchmarks: reports/desktop-012/RESULTS.md.

@@ -3,6 +3,7 @@
 from dataclasses import dataclass, replace
 
 from .observatory import ExperimentSettings
+from .ecology import recommended_settings
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,16 @@ PRESETS = (
                               seasons_enabled=True, season_length=300, droughts_enabled=True,
                               drought_duration=5, drought_interval=300)),
 )
+
+# Retain the original indices for diagnostic reproductions and fixture checks.
+PRESETS = tuple(Preset(p.name, "Classic rules. "+p.description, p.settings) for p in PRESETS) + (
+    Preset("Living Ecosystem", "Ecology rules: dietary niches and competing hunters.", recommended_settings()),
+    Preset("Living Seasons", "Ecology rules with seasonal food pressure and droughts.", recommended_settings(stress=True)),
+)
+
+
+def display_presets():
+    return [(index, preset) for index, preset in enumerate(PRESETS) if preset.settings.rules_version == 2]
 
 
 def preset_name(settings: ExperimentSettings) -> str:

@@ -177,7 +177,8 @@ class PredatorTests(unittest.TestCase):
             for radius in range(4, 21):
                 for pulse in range(-2, 3):
                     predator_sprite(index, radius, pulse, True)
-        self.assertLessEqual(predator_sprite.cache_info().currsize, 384)
+        self.assertLessEqual(predator_sprite.cache_info().currsize, 512)
+        self.assertLessEqual(predator_sprite.cache_info().bytes,16*1024*1024)
         self.assertEqual(snapshot(w), before)
 
     def test_predator_settings_validation(self):

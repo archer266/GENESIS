@@ -194,8 +194,10 @@ class CameraAppTests(unittest.TestCase):
         self.assertEqual(app.renderer._view_background.get_size(), app.viewport.size)
         self.assertEqual(app.renderer.overlay.get_size(), app.viewport.size)
         from genesis.visuals import cell_sprite, predator_sprite
-        self.assertLessEqual(cell_sprite.cache_info().currsize, 96)
-        self.assertLessEqual(predator_sprite.cache_info().currsize, 96)
+        for make in (cell_sprite,predator_sprite):
+            info=make.cache_info()
+            self.assertLessEqual(info.currsize,512)
+            self.assertLessEqual(info.bytes,16*1024*1024)
 
     def test_main_loop_processes_long_frame_without_discarding_ticks(self):
         app = self.app

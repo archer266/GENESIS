@@ -35,10 +35,13 @@ def smoke(app, output, fixtures, relaunch):
         assert app.preferences.values['save_directory']==str(output/'Files Ω')
         assert app.preferences.values['export_directory']==str(output/'Files Ω')
         app.draw()
-        pygame.image.save(app.screen,str(output/'relaunch.png'))
-        return ['Preferences restored across separate process launches']
+        app.offer_recovery()
+        assert app.recovery.pending_choice
+        app.observatory.activate(app,'confirm')
+        assert app.sim_clock.paused and not app.recovery.pending_choice
+        return ['Preferences restored across separate process launches', 'Recovery offered and resumed paused across process launches']
     assert app.guide_until==12 and not p.opened
-    app.draw(); pygame.image.save(app.screen,str(output/'first-launch.png'))
+    app.draw()
     app.activate_control('dismiss_guide'); assert app.guide_until==0
     before=fingerprint(app)
     def click(point):
@@ -48,7 +51,7 @@ def smoke(app, output, fixtures, relaunch):
     for size,name in (((1380,900),'normal'),((960,720),'minimum')):
         app.handle_event(pygame.event.Event(pygame.VIDEORESIZE,w=size[0],h=size[1]))
         p.opened=False;app._layout()
-        app.draw();pygame.image.save(app.screen,str(output/f'closed-{name}.png'))
+        app.draw()
         click(app.buttons['pause'].center); assert app.sim_clock.paused
         click(app.buttons['4'].center); assert app.sim_clock.speed==4
         click(app.buttons['1'].center)
@@ -56,14 +59,13 @@ def smoke(app, output, fixtures, relaunch):
         click(app.buttons['observatory'].center);assert p.opened
         for tab in ('settings','history','evolution','habitats','environment','diagnostics','worlds','appearance'):
             p.show(app,tab);app.draw()
-        pygame.image.save(app.screen,str(output/f'appearance-{name}.png'))
         p.ensure_visible(app,'guide');click(p.buttons['guide'].center)
         assert not p.opened and app.guide_until>app.ui_time
         app._layout(); click(app.buttons['dismiss_guide'].center)
         assert app.guide_until==0
         checks.append(f'Playback, all tabs, guide reopen/dismiss at {size}')
     app.toggle_fullscreen();assert app.fullscreen
-    app.draw();pygame.image.save(app.screen,str(output/'fullscreen.png'))
+    app.draw()
     app.toggle_fullscreen();assert not app.fullscreen and app.screen.get_size()==(960,720)
     app.toggle_ui();assert app.ui_hidden
     key(pygame.K_ESCAPE);assert not app.ui_hidden
@@ -76,6 +78,10 @@ def smoke(app, output, fixtures, relaunch):
         pygame.event.post(pygame.event.Event(pygame.TEXTINPUT,text=str(folder/name)))
         pygame.event.post(pygame.event.Event(pygame.KEYDOWN,key=pygame.K_RETURN,mod=0))
     p.show(app,'worlds')
+    assert 'autosave' in p.content_buttons and app.recovery.enabled
+    p.activate(app,'autosave');assert not app.recovery.enabled
+    p.activate(app,'autosave');assert app.recovery.enabled
+    checks.append('Worlds autosave toggle accessible and persisted')
     picker_input('checkpoint 日本語.json');p.file_action(app,True)
     assert not p.world_notice_error and (folder/'checkpoint 日本語.json').is_file()
     saved=fingerprint(app)
@@ -95,17 +101,22 @@ def smoke(app, output, fixtures, relaunch):
         assert not (Path(sys.executable).parent/'forbidden.json').exists()
     checks.append('Readable invalid-load/existing-export errors; current world retained; frozen app-folder writes rejected')
     for fixture in sorted(fixtures.glob('phase*_world_v*.json')):
-        assert app.load_file(fixture)
-        app.sim_clock.paused=False
-        app.update(2)
-        checkpoint=folder/(fixture.stem+'-resumed.json')
+        before=fingerprint(app)
+        assert not app.load_file(fixture) and fingerprint(app)==before
+        assert app.observatory.world_notice_error
+        checks.append(f'{fixture.name}: obsolete rules rejected; active world retained')
+    ecology_fixture=fixtures/'ecology-cap.json'
+    if ecology_fixture.is_file():
+        assert app.load_file(ecology_fixture)
+        app.sim_clock.paused=False;app.update(25)
+        assert app.world.config.rules_version==2 and app.world.births>0 and app.world.catches>0
+        checkpoint=folder/'ecology-resumed.json'
         assert app.save_file(checkpoint)
-        app.update(3)
-        expected=fingerprint(app)
+        app.update(15);expected=fingerprint(app)
         assert app.load_file(checkpoint)
-        app.sim_clock.paused=False;app.update(3)
+        app.sim_clock.paused=False;app.update(15)
         assert fingerprint(app)==expected
-        checks.append(f'{fixture.name}: migration and exact continuation after v6 re-save')
+        checks.append('Ecology checkpoint resumes exactly through future births, mutations and catches')
     app.glass.reduced=True;app.visuals.enabled=False
     p.show(app,'worlds');p.rect.width=430;app._layout()
     app.save_preferences()
@@ -113,6 +124,7 @@ def smoke(app, output, fixtures, relaunch):
 
 
 def benchmark(app, fixture):
+    from .visuals import cell_sprite, predator_sprite
     cases=[]
     def summary(items):
         v=sorted(items)
@@ -134,6 +146,7 @@ def benchmark(app, fixture):
             start=time.perf_counter();step();core[0]+=time.perf_counter()-start
         app.world.step=timed_step
         samples={key:[] for key in ('simulation','update','render','total')}
+        cache_before={name:fn.cache_info() for name,fn in (('prey',cell_sprite),('predator',predator_sprite))}
         populations=[];start=time.perf_counter()
         for _ in range(360):
             pygame.event.pump();core[0]=0
@@ -145,8 +158,14 @@ def benchmark(app, fixture):
         del app.world.step
         assert app.world.ticks-tick==180*speed
         cases.append(dict(speed=speed,frames=360,resolution=[1380,900],population_start=population,
+                          rules_version=app.world.config.rules_version,seed=app.seed,
                           population_range=[min(populations),max(populations)],wall_seconds=round(wall,3),
                           ticks=app.world.ticks-tick,state_sha256=fingerprint(app),
+                          sprite_cache={name:dict(hits=fn.cache_info().hits-cache_before[name].hits,
+                                                 misses=fn.cache_info().misses-cache_before[name].misses,
+                                                 retained=fn.cache_info().currsize,limit=fn.cache_info().maxsize,
+                                                 bytes=fn.cache_info().bytes,maxbytes=fn.cache_info().maxbytes)
+                                        for name,fn in (('prey',cell_sprite),('predator',predator_sprite))},
                           **{k:summary(v) for k,v in samples.items()}))
     return cases
 
@@ -156,6 +175,7 @@ def main(arguments):
     parser.add_argument('--output',required=True)
     parser.add_argument('--fixtures',required=True)
     parser.add_argument('--mode',choices=('smoke','relaunch','benchmark'),default='smoke')
+    parser.add_argument('--fixture-name',choices=('ecology-cap.json',))
     args=parser.parse_args(arguments)
     output=writable_destination(args.output);output.mkdir(parents=True,exist_ok=True)
     fixtures=Path(args.fixtures).resolve()
@@ -169,8 +189,12 @@ def main(arguments):
                 display_driver=pygame.display.get_driver())
     try:
         if args.mode=='benchmark':
+            app.recovery.set_enabled(False)
             result['method']='30 frozen warmup draws + 360 active frames per speed, fixed 1/60 input, FX/habitats on, History panel open, flip included, event pump excluded; no dropped steps. Short benchmark, not sustained FPS.'
-            result['cases']=benchmark(app,fixtures/'environment-cap.json')
+            fixture=fixtures/(args.fixture_name or 'ecology-cap.json')
+            if not args.fixture_name and not fixture.is_file():fixture=fixtures/'environment-cap.json'
+            result['fixture']=str(fixture)
+            result['cases']=benchmark(app,fixture)
         else:
             result['checks']=smoke(app,output,fixtures,args.mode=='relaunch')
         result['passed']=True
@@ -178,5 +202,6 @@ def main(arguments):
         result['passed']=False;result['error']=repr(error)
         raise
     finally:
+        app.close_recovery()
         app.save_preferences();pygame.quit()
         (output/(args.mode+'.json')).write_text(json.dumps(result,indent=2),encoding='utf-8')

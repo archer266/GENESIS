@@ -18,6 +18,14 @@ except ImportError:
 
 @unittest.skipIf(pygame is None, "Pygame is not installed")
 class VisualTests(unittest.TestCase):
+    def test_body_colors_span_full_trait_domain(self):
+        from genesis.simulation import Traits
+        from genesis.visuals import trait_color, PALETTE, color_index
+        self.assertEqual(trait_color(Traits(size=3)),PALETTE[0])
+        self.assertEqual(trait_color(Traits(size=9)),PALETTE[-1])
+        self.assertNotEqual(trait_color(Traits(size=5)),trait_color(Traits(size=8)))
+        self.assertEqual(len({color_index(Traits(size=3+i*6/320)) for i in range(321)}),33)
+
     def test_effects_observe_real_events_only(self):
         world = World(42, replace(Config(), initial_population=0, initial_food=0, food_per_second=0))
         parent = world.add_organism(200, 200, energy=160, age=10)
@@ -81,7 +89,8 @@ class VisualTests(unittest.TestCase):
             for radius in range(4, 21):
                 for pulse in range(-2, 3):
                     cell_sprite(i, radius, pulse, True)
-        self.assertLessEqual(cell_sprite.cache_info().currsize, 384)
+        self.assertLessEqual(cell_sprite.cache_info().currsize, 512)
+        self.assertLessEqual(cell_sprite.cache_info().bytes,16*1024*1024)
         for size in range(2, 6):
             food_sprite(size, True)
         self.assertLessEqual(food_sprite.cache_info().currsize, 16)

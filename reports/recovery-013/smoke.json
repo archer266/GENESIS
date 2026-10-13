@@ -1,0 +1,33 @@
+{
+  "mode": "smoke",
+  "frozen": true,
+  "executable": "C:\\Users\\Admin\\AppData\\Local\\Temp\\GENESIS release \u03a9 970345a1\\GENESIS\\GENESIS.exe",
+  "pygame_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\GENESIS release \u03a9 970345a1\\GENESIS\\_internal\\pygame\\__init__.py",
+  "cwd": "C:\\Users\\Admin\\AppData\\Local\\Temp\\GENESIS release \u03a9 970345a1",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13600K",
+  "os": "Windows-10-10.0.26200-SP0",
+  "python": "3.11.2",
+  "pygame": "2.6.1",
+  "sdl": [
+    2,
+    28,
+    4
+  ],
+  "display_driver": "windows",
+  "checks": [
+    "Playback, all tabs, guide reopen/dismiss at (1380, 900)",
+    "Playback, all tabs, guide reopen/dismiss at (960, 720)",
+    "Fullscreen/window restoration, Hide UI restoration; model and RNG unchanged",
+    "Worlds autosave toggle accessible and persisted",
+    "Native modal save/load, replacement confirmation, three CSV destination pickers; Unicode paths",
+    "Readable invalid-load/existing-export errors; current world retained; frozen app-folder writes rejected",
+    "phase10_world_v6.json: obsolete rules rejected; active world retained",
+    "phase3_world_v1.json: obsolete rules rejected; active world retained",
+    "phase4_world_v2.json: obsolete rules rejected; active world retained",
+    "phase6_world_v3.json: obsolete rules rejected; active world retained",
+    "phase7_world_v4.json: obsolete rules rejected; active world retained",
+    "phase8_world_v5.json: obsolete rules rejected; active world retained",
+    "Ecology checkpoint resumes exactly through future births, mutations and catches"
+  ],
+  "passed": true
+}

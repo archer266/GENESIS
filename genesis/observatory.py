@@ -27,8 +27,11 @@ class ExperimentSettings:
     droughts_enabled: bool = False
     drought_duration: int = 15
     drought_interval: int = 90
+    rules_version: int = 1
 
     def __post_init__(self):
+        if type(self.rules_version) is not int or self.rules_version not in (1,2):
+            raise ValueError("Simulation rules must be Classic (1) or Ecology (2)")
         validate_settings(self)
         if type(self.habitat_enabled) is not bool or type(self.map_seed) is not int or not 0 <= self.map_seed <= 4294967295:
             raise ValueError("Habitats: mode must be off/on and map seed an integer from 0 to 4294967295.")
@@ -48,14 +51,14 @@ class ExperimentSettings:
             raise ValueError("Starting prey plus predators must not exceed 300.")
 
     def config(self) -> Config:
-        return replace(Config(), initial_population=self.initial_population,
+        return replace(Config(), rules_version=self.rules_version, predator_energy_multiplier=1.0 if self.rules_version == 2 else 2.5, initial_population=self.initial_population,
                        food_per_second=self.food_per_second, mutation_strength=self.mutation_strength,
                        predator_enabled=self.predator_enabled, initial_predators=self.initial_predators,
                        habitat_enabled=self.habitat_enabled, map_seed=self.map_seed,
                        **{k: getattr(self, k) for k in DEFAULTS})
 
     def text_values(self) -> dict[str, str]:
-        return {"seed": str(self.seed), "initial_population": str(self.initial_population),
+        return {"rules_version": str(self.rules_version), "seed": str(self.seed), "initial_population": str(self.initial_population),
                 "food_per_second": f"{self.food_per_second:g}",
                 "mutation_percent": f"{self.mutation_strength * 100:g}",
                 "predator_enabled": "1" if self.predator_enabled else "0",
@@ -99,7 +102,7 @@ class ExperimentSettings:
             except (ValueError, TypeError):
                 raise ValueError(f"{key.replace('_', ' ').title()}: enter a valid whole number.") from None
         return cls(parsed["seed"], parsed["initial_population"], parsed["food_per_second"], parsed["mutation_percent"] / 100,
-                   mode == "1", predators, habitat_mode == "1", map_seed, **environment)
+                   mode == "1", predators, habitat_mode == "1", map_seed, rules_version=int(values.get("rules_version", "1")), **environment)
 
 
 @dataclass(frozen=True)

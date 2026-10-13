@@ -106,7 +106,7 @@ class EnvironmentTests(unittest.TestCase):
         for habitats, predators in ((False, False), (True, True)):
             c = Config(habitat_enabled=habitats, predator_enabled=predators, initial_predators=8 if predators else 0)
             a = World(7, c)
-            b = legacy.World(7, legacy.Config(**{k: v for k, v in asdict(c).items() if k not in DEFAULTS}))
+            b = legacy.World(7, legacy.Config(**{k: v for k, v in asdict(c).items() if k in legacy.Config.__dataclass_fields__}))
             for _ in range(900):
                 a.step(); b.step()
             for name in ("organisms", "food"):

@@ -33,7 +33,12 @@ Expand-Archive -LiteralPath (Join-Path $projectRoot "release\GENESIS-$version-wi
 $fixtures = Join-Path $testRoot 'fixtures'
 New-Item -ItemType Directory -Path $fixtures | Out-Null
 Copy-Item -Path (Join-Path $projectRoot 'tests\fixtures\*_world_v*.json') -Destination $fixtures
-Copy-Item -LiteralPath (Join-Path $projectRoot 'artifacts\environment-cap.json') -Destination $fixtures
+foreach ($fixtureName in @('ecology-cap.json')) {
+    $fixturePath = Join-Path $projectRoot (Join-Path 'artifacts' $fixtureName)
+    if (Test-Path -LiteralPath $fixturePath) {
+        Copy-Item -LiteralPath $fixturePath -Destination $fixtures
+    }
+}
 $exe = Join-Path $testRoot 'GENESIS\GENESIS.exe'
 $output = Join-Path $testRoot 'checks'
 $prior = @{}

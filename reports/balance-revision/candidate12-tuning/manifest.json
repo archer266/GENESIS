@@ -1,0 +1,149 @@
+{
+  "stage": "tune",
+  "seconds": 3600,
+  "workers": 6,
+  "recipes": [
+    {
+      "label": "normal-rules2",
+      "settings": {
+        "seed": 211,
+        "initial_population": 160,
+        "food_per_second": 28,
+        "mutation_strength": 0.18,
+        "predator_enabled": true,
+        "initial_predators": 8,
+        "habitat_enabled": true,
+        "map_seed": 211,
+        "seasons_enabled": false,
+        "season_length": 180,
+        "droughts_enabled": false,
+        "drought_duration": 10,
+        "drought_interval": 120,
+        "rules_version": 2
+      }
+    },
+    {
+      "label": "normal-rules2",
+      "settings": {
+        "seed": 223,
+        "initial_population": 160,
+        "food_per_second": 28,
+        "mutation_strength": 0.18,
+        "predator_enabled": true,
+        "initial_predators": 8,
+        "habitat_enabled": true,
+        "map_seed": 223,
+        "seasons_enabled": false,
+        "season_length": 180,
+        "droughts_enabled": false,
+        "drought_duration": 10,
+        "drought_interval": 120,
+        "rules_version": 2
+      }
+    },
+    {
+      "label": "normal-rules2",
+      "settings": {
+        "seed": 227,
+        "initial_population": 160,
+        "food_per_second": 28,
+        "mutation_strength": 0.18,
+        "predator_enabled": true,
+        "initial_predators": 8,
+        "habitat_enabled": true,
+        "map_seed": 227,
+        "seasons_enabled": false,
+        "season_length": 180,
+        "droughts_enabled": false,
+        "drought_duration": 10,
+        "drought_interval": 120,
+        "rules_version": 2
+      }
+    },
+    {
+      "label": "stress-rules2",
+      "settings": {
+        "seed": 211,
+        "initial_population": 160,
+        "food_per_second": 28,
+        "mutation_strength": 0.18,
+        "predator_enabled": true,
+        "initial_predators": 8,
+        "habitat_enabled": true,
+        "map_seed": 211,
+        "seasons_enabled": true,
+        "season_length": 180,
+        "droughts_enabled": true,
+        "drought_duration": 10,
+        "drought_interval": 120,
+        "rules_version": 2
+      }
+    },
+    {
+      "label": "stress-rules2",
+      "settings": {
+        "seed": 223,
+        "initial_population": 160,
+        "food_per_second": 28,
+        "mutation_strength": 0.18,
+        "predator_enabled": true,
+        "initial_predators": 8,
+        "habitat_enabled": true,
+        "map_seed": 223,
+        "seasons_enabled": true,
+        "season_length": 180,
+        "droughts_enabled": true,
+        "drought_duration": 10,
+        "drought_interval": 120,
+        "rules_version": 2
+      }
+    },
+    {
+      "label": "stress-rules2",
+      "settings": {
+        "seed": 227,
+        "initial_population": 160,
+        "food_per_second": 28,
+        "mutation_strength": 0.18,
+        "predator_enabled": true,
+        "initial_predators": 8,
+        "habitat_enabled": true,
+        "map_seed": 227,
+        "seasons_enabled": true,
+        "season_length": 180,
+        "droughts_enabled": true,
+        "drought_duration": 10,
+        "drought_interval": 120,
+        "rules_version": 2
+      }
+    }
+  ],
+  "sources": {
+    "genesis\\app.py": "17ccc2cc8d0f38ef6933dba72af50dfd71c9eb5510ee9bf240afb5ffff1d4f23",
+    "genesis\\camera.py": "aa0f8c3bd9acf1c2b03813b99d24adb9095663119c33258a979cace3cdee4816",
+    "genesis\\desktop.py": "0e20100d6923bb39ad383aed66c8e0a5a7ed517fc897817c287bcdf8cacac822",
+    "genesis\\diagnostics.py": "fb26e0bbfaa408d6e82ee5886b772e2d866dd83d0f965f0ca7720aa8ff1e0e65",
+    "genesis\\diagnostics_ui.py": "9476557bee474002aeec8a298ec02bbbd3821e26ed4d3761ef8723f41ec900d7",
+    "genesis\\ecology.py": "51a05fd8c3049aa705450ae4bf70d9d07bbb5bb234a710b7ac9f27f3c710b1f1",
+    "genesis\\environment.py": "217eaa393efe35ceb855d1ca63b2c68f9082d5b1323ef667cc5fb1666d086ab3",
+    "genesis\\environment_ui.py": "4a661ef55ec343274cae02c80107bdbe25d9ac0bab294d764eade52921797a4e",
+    "genesis\\file_dialogs.py": "0cd2833c80648b56eabfdaae49973a1671bd5917db48c8887c99717e2ad3b640",
+    "genesis\\floating_ui.py": "2928fa64c39515269cee7fe49a2b7a8a77ba3d520020ba7ccd66bfda26993957",
+    "genesis\\glass.py": "789c8b3e35186230be967dbc333d29bac8d30bb140922468fe97f36de4bdf3d6",
+    "genesis\\habitats.py": "8bb045fef7ce976f2ac78da15d51362b286514958ef8fe18c7837fda2903ddad",
+    "genesis\\launch_options.py": "6b9e83cb3b8329bb2df222ebb13e607372348ef044d29e4cff0f649ad34b1d2e",
+    "genesis\\lineage.py": "6c76efb56b307b06d472c4db1a37817a594fddd9ef2499bd7fd7e279f65b19f0",
+    "genesis\\lineage_ui.py": "5caf0dee76b1a4bb3b039017a532319600ef89c629fb640199e12fee8295700a",
+    "genesis\\observatory.py": "82b9e2363841187a6bc94420c2e1fa71a2461d05eb92c9984542f0db988a007a",
+    "genesis\\observatory_ui.py": "6fa6aab7d8a04f5fd960062b1306ed4e14ca9d44194e06da005c5d845c1a5e10",
+    "genesis\\persistence.py": "e80b20464d9cdfe6202b37e22f12873eb12ae2c6eb177b3daae24c0bba5286e1",
+    "genesis\\presets.py": "87dd8e41da149a4060646b24311746a1b4543850337d1eefc3676e49b6a1efb2",
+    "genesis\\release_check.py": "013cfea84be8eea5894bfb45dcff0424d850de9ff7be5a2890c276a487dbc24d",
+    "genesis\\simulation.py": "73c65a5d576de14c9fc9372da78bc8bd0b35e37d2349426f21a8bf7797e31937",
+    "genesis\\sprite_cache.py": "c69a7c00460fef11f0e885fa3976f7c887a838fa42405523250ef50a762b3168",
+    "genesis\\user_files.py": "48d9c0624d7d8431f32e5a81d72c2dab594e88f0dad2519b41a95743b5515cd1",
+    "genesis\\visuals.py": "0e0aa528888ce9f9fa6489de9b52750c67bfd53b55d776ac56b22e552a799104",
+    "genesis\\__init__.py": "da0fecf1d69845dfc3dc517b7b7b72c7d16c76f1a5d2b953dbf4aa0a67b58151",
+    "genesis\\__main__.py": "9756b2a9f4e1f4c7be2025732799a933d41961b0b24b0e7ae5d94b549649b2f6"
+  }
+}

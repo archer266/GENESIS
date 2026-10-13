@@ -1,0 +1,126 @@
+{
+  "mode": "benchmark",
+  "frozen": true,
+  "executable": "C:\\Users\\Admin\\AppData\\Local\\Temp\\GENESIS release \u03a9 b95623b3\\GENESIS\\GENESIS.exe",
+  "pygame_path": "C:\\Users\\Admin\\AppData\\Local\\Temp\\GENESIS release \u03a9 b95623b3\\GENESIS\\_internal\\pygame\\__init__.py",
+  "cwd": "C:\\Users\\Admin\\AppData\\Local\\Temp\\GENESIS release \u03a9 b95623b3",
+  "cpu": "13th Gen Intel(R) Core(TM) i5-13600K",
+  "os": "Windows-10-10.0.26200-SP0",
+  "python": "3.11.2",
+  "pygame": "2.6.1",
+  "sdl": [
+    2,
+    28,
+    4
+  ],
+  "display_driver": "windows",
+  "method": "30 frozen warmup draws + 360 active frames per speed, fixed 1/60 input, FX/habitats on, History panel open, flip included, event pump excluded; no dropped steps. Short benchmark, not sustained FPS.",
+  "fixture": "C:\\Users\\Admin\\AppData\\Local\\Temp\\GENESIS release \u03a9 b95623b3\\fixtures\\ecology-cap.json",
+  "cases": [
+    {
+      "speed": 1,
+      "frames": 360,
+      "resolution": [
+        1380,
+        900
+      ],
+      "population_start": 292,
+      "rules_version": 2,
+      "seed": 1931,
+      "population_range": [
+        280,
+        292
+      ],
+      "wall_seconds": 4.081,
+      "ticks": 180,
+      "state_sha256": "b6d704fc17653df5ae4296009b48dad56a4ed79a1cc900569528b8666dbbf4e4",
+      "sprite_cache": {
+        "prey": {
+          "hits": 94346,
+          "misses": 32,
+          "retained": 165,
+          "limit": 512,
+          "bytes": 2405460,
+          "maxbytes": 16777216
+        },
+        "predator": {
+          "hits": 7153,
+          "misses": 47,
+          "retained": 60,
+          "limit": 512,
+          "bytes": 1019760,
+          "maxbytes": 16777216
+        }
+      },
+      "simulation": {
+        "median_ms": 3.215,
+        "p95_ms": 4.06
+      },
+      "update": {
+        "median_ms": 3.457,
+        "p95_ms": 4.328
+      },
+      "render": {
+        "median_ms": 8.85,
+        "p95_ms": 12.982
+      },
+      "total": {
+        "median_ms": 12.127,
+        "p95_ms": 16.346
+      }
+    },
+    {
+      "speed": 4,
+      "frames": 360,
+      "resolution": [
+        1380,
+        900
+      ],
+      "population_start": 292,
+      "rules_version": 2,
+      "seed": 1931,
+      "population_range": [
+        280,
+        300
+      ],
+      "wall_seconds": 6.365,
+      "ticks": 720,
+      "state_sha256": "1ec12fbde52fb0de15f57e00612675b714105e1df668298af0dc5fc3cbe12429",
+      "sprite_cache": {
+        "prey": {
+          "hits": 98674,
+          "misses": 15,
+          "retained": 180,
+          "limit": 512,
+          "bytes": 2594800,
+          "maxbytes": 16777216
+        },
+        "predator": {
+          "hits": 7200,
+          "misses": 0,
+          "retained": 60,
+          "limit": 512,
+          "bytes": 1019760,
+          "maxbytes": 16777216
+        }
+      },
+      "simulation": {
+        "median_ms": 7.43,
+        "p95_ms": 8.398
+      },
+      "update": {
+        "median_ms": 7.934,
+        "p95_ms": 8.954
+      },
+      "render": {
+        "median_ms": 9.648,
+        "p95_ms": 10.479
+      },
+      "total": {
+        "median_ms": 17.639,
+        "p95_ms": 19.181
+      }
+    }
+  ],
+  "passed": true
+}

@@ -37,7 +37,7 @@ class PersistenceTests(unittest.TestCase):
             path = save_world(Path(directory) / "world.json", world, clock, history, selection)
             loaded = load_world(path)
             raw = json.loads(path.read_text(encoding="utf-8"))
-        self.assertEqual(raw["version"], 6)
+        self.assertEqual(raw["version"], 7)
         self.assertNotIn("effects", raw)
         self.assertEqual(document(world, clock, history, selection), before)
         self.assertTrue(loaded.clock.paused)
@@ -185,7 +185,7 @@ class PersistenceTests(unittest.TestCase):
             self.assertNotEqual(path.read_bytes(), previous)
 
     def test_presets_have_expected_settings_and_reproduce(self):
-        self.assertEqual([p.name for p in PRESETS], ["Balanced", "Abundance", "Scarcity", "Rapid Mutation", PRESETS[4].name, PRESETS[5].name, "Changing Seasons", "Coexistence"])
+        self.assertEqual([p.name for p in PRESETS], ["Balanced", "Abundance", "Scarcity", "Rapid Mutation", PRESETS[4].name, PRESETS[5].name, "Changing Seasons", "Coexistence", "Living Ecosystem", "Living Seasons"])
         self.assertEqual(PRESETS[0].settings, ExperimentSettings())
         self.assertGreater(PRESETS[1].settings.food_per_second, 20)
         self.assertLess(PRESETS[2].settings.food_per_second, 20)
